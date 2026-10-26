@@ -27,3 +27,5 @@
 2. [설정 및 실행 가이드](docs/SETUP.md)를 따라 Atlas와 Voyage AI를 설정하고, 시크릿 등록, 샘플 데이터 준비, 앱 실행을 진행합니다.
 
 Web UI는 모든 필수 시크릿을 등록하고 Aspire 리소스가 실행된 뒤 <http://localhost:5087>에서 열립니다. 접속이 되지 않으면 먼저 Aspire 대시보드에서 `mcp-memory`, `agent`, `webui` 상태를 확인하세요. [samples/](samples/)의 가상 이력서로 면접을 진행하고, 면접이 끝나면 지난 면접에 대해 물어볼 수 있습니다.
+
+[docs/DEMO.md](docs/DEMO.md)의 흐름에 따라 에이전트 메모리 구성을 체험해보세요.
