@@ -1,70 +1,31 @@
-# Architecture reference
+# 아키텍처
 
-This page maps the completed application's processes and request path. Use it as a reference whether you're running the finished application or learning to build it. To implement the agent connections yourself, the [workshop](https://codemillmatt.github.io/interview-coach-agent-framework/workshop/) guides you through each step. Chapter 0 combines tool setup with a run of the finished example.
+| 구성 요소 | 프로젝트 | 역할 |
+|---|---|---|
+| AppHost | `src/InterviewCoach.AppHost`, 루트 `apphost.cs` | Aspire 리소스 구성. 두 파일은 항상 같은 내용으로 유지합니다. |
+| WebUI | `InterviewCoach.WebUI` | Blazor 채팅 UI. AG-UI로 에이전트와 통신하고, 저장된 대화를 읽어 복원합니다. |
+| Agent | `InterviewCoach.Agent` | GitHub Copilot SDK 위에서 동작하는 Agent Framework 워크플로. Short Term 미들웨어 포함. |
+| Memory MCP | `InterviewCoach.Mcp.Memory` | MongoDB에 접근하는 MCP 도구 (`/mcp`, stateless HTTP) |
+| Memory 라이브러리 | `InterviewCoach.Memory` | MongoDB C# 드라이버 기반 리포지토리, Voyage 임베딩 클라이언트, 모델 |
+| MarkItDown MCP | 컨테이너 `mcp/markitdown` | 이력서와 JD에서 텍스트 추출 |
+| MongoDB Atlas | 외부 | 메모리 저장소. 컬렉션은 [MEMORY.md](MEMORY.md)를 참고 |
+| Voyage API | 외부 | 피드백 항목과 검색어의 임베딩 생성 |
 
-## Runtime responsibilities
+```
+브라우저 → WebUI → (AG-UI) → Agent ─┬─ Copilot SDK (모델)
+                                    ├─ MarkItDown MCP
+                                    ├─ Memory MCP ──────────┐
+                                    └─ Short Term 미들웨어 ─┤→ MongoDB Atlas (+ Voyage)
+```
 
-| Component | Implementation | Responsibility |
-| --- | --- | --- |
-| WebUI server | `src/InterviewCoach.WebUI` | Runs server-interactive Blazor components, calls the agent through AG-UI, and renders updates to the browser |
-| Agent service | `src/InterviewCoach.Agent` | Constructs agents, connects a model provider, invokes tools, exposes `/ag-ui` |
-| InterviewData MCP | `src/InterviewCoach.Mcp.InterviewData` | Session tools backed by the supplied EF Core Cosmos repository |
-| MarkItDown MCP | `mcp/markitdown` container | Converts reachable document URLs into text |
-| Aspire | `apphost.cs` and `src/InterviewCoach.AppHost` | Starts resources, supplies references/configuration, and orders dependencies |
-| Service defaults | `src/InterviewCoach.ServiceDefaults` | Shared health, service discovery, HTTP, and telemetry setup |
+로컬 포트: WebUI `5087`, Agent `5152` (`/ag-ui`, `/devui/`), Memory MCP `5141` (`/mcp`). MarkItDown은 무작위 포트로 노출됩니다.
 
-The Foundry branch in `Program.cs` creates an OpenAI-compatible `ChatClient` and registers `client.AsIChatClient()`. `CreateProviderAgent` resolves that model client and constructs a `ChatClientAgent` with a name, instructions, and tools. The model runs in Foundry; the agents execute in this application's .NET process.
+## 데이터 흐름
 
-The alternative Copilot path uses the Agent Framework Copilot adapter. Provider selection and agent mode are independent. See [configuration](CONFIGURATION.md) and [agent modes](MULTI-AGENT.md).
+- 연결 문자열과 키: Agent와 Memory MCP가 `mongodb` 연결 문자열을 참조합니다. Voyage 키는 임베딩을 만드는 Memory MCP에만 전달합니다.
+- Short Term 저장: UI는 매 턴마다 전체 메시지 이력을 보냅니다. 그래서 미들웨어는 마지막 사용자 메시지와 스트리밍된 응답만 기록합니다. 세션은 시스템 메시지의 `SessionId: <guid>`로 구분합니다.
+- 대화 복원: WebUI 주소는 `/chat/{sessionId}`입니다. 페이지가 열리면 Agent의 `GET /chat/{sessionId}/messages`를 호출해 `chat_messages`의 턴을 읽어 옵니다. 여러 에이전트가 이어서 한 답변은 하나로 합쳐 돌려줍니다. 그래서 새로고침, 새 탭, WebUI 재시작 후에도 대화가 이어집니다.
+- 업로드: 첨부 파일은 Agent가 `/uploads/...` URL로 제공하고, MarkItDown 컨테이너가 이를 가져갑니다. 컨테이너에서 접근할 수 있도록 loopback 주소는 `host.docker.internal`로 바꿉니다.
+- Voyage 엔드포인트: Atlas에서 발급한 키(`al-` 접두사)는 `https://ai.mongodb.com/v1`로 요청합니다. Voyage AI 대시보드에서 직접 발급한 키는 `https://api.voyageai.com/v1`로 요청하며, `Voyage:BaseUrl`로 바꿀 수 있습니다.
 
-## Request and tool flow
-
-1. The browser sends input to its server-side Blazor component. The WebUI server's `AGUIChatClient` sends messages to the agent's `/ag-ui` endpoint.
-2. Agent Framework runs the selected agent or handoff workflow.
-3. The model can request a tool call. Agent Framework invokes a discovered tool through the appropriate keyed MCP client.
-4. InterviewData accesses Cosmos, or MarkItDown converts a document.
-5. Tool results return to the agent; its response streams back to the WebUI server, which updates the browser through Blazor.
-
-The WebUI registers `AddInteractiveServerComponents` and uses `InteractiveServerRenderMode(prerender: false)`. Its C# chat component runs in a server-side circuit. MCP connects agent-side tools; AG-UI connects the WebUI server to the agent service. See [state ownership](SESSION-DATA.md#state-ownership) for message accounting and refresh behavior.
-
-## Handoff topology
-
-Triage starts the workflow and chooses a specialist using conversation context. Its tools handle transfers. Receptionist has the application MCP tools for session setup and document intake.
-
-The usual interview path is Triage -> Receptionist -> Behavioural Interviewer -> Technical Interviewer -> Summariser. Each specialist can return to Triage for an out-of-order request; Summariser returns to Triage after completing the summary. The introductory workshop diagram shows this usual path. The [agent-mode reference](MULTI-AGENT.md#handoff-mode) lists all eleven permitted edges and the exact tool assignments.
-
-The five roles share the selected model deployment and transfer control between phases. Handoffs are model-directed within the configured graph, so check the actual route during a run.
-
-## Local and deployed entry points
-
-The quick start uses the root [file-based AppHost](../apphost.cs). It loads `apphost.settings.json`. The [project-based AppHost](../src/InterviewCoach.AppHost/AppHost.cs) is the target named by `azure.yaml` for Container Apps deployment and uses its project configuration.
-
-In the completed source, both describe the full service topology. Each entry point loads its own configuration; review the settings for the one you run. The project-based host also explicitly forwards `AZURE_TENANT_ID`. See [configuration](CONFIGURATION.md#entry-points-and-precedence).
-
-In local run mode, Cosmos uses the Linux-based (vNext) emulator container. Foundry resources can still be provisioned in Azure during a local run. The final app also starts MarkItDown using the reference's `latest` image tag. Record its image digest when comparing runtime results.
-
-## Workshop startup helpers
-
-The workshop starter supplies the Blazor UI, repository, service defaults, and `WorkshopHosting.cs`. That helper contains Foundry model/authentication and DevUI code derived from the tagged reference's `Program.cs`. It is inactive in the starter, which runs a cloud-free shell. The workshop packages only the Foundry path; the standalone repository retains both providers.
-
-In `03-first-coach`, learners implement the `ChatClientAgent` constructor and coaching instructions before activating the helper and model reference. Streaming, MCP clients, and workflow connections arrive in later lessons. This keeps the first exercise focused on creating an agent while leaving the supplied startup code available to inspect.
-
-Learners edit only root `apphost.cs` for orchestration. By `07-handoffs`, it runs the complete interview workflow. The capstone uses that same application source. It keeps `WorkshopHosting.cs`, the MCP discovery probe, and the session ID display. Learners check the interview and saved record without changing the file layout.
-
-The project-based AppHost and its settings remain in their starter state throughout the core course. If learners choose [optional deployment](DEPLOYMENT.md#check-the-deployment-entry-point), a separate patch prepares only those two files. The startup helper and agent code remain in place.
-
-## State and uploads
-
-Cosmos stores interview records, including document fields, transcript text, and completion state. The server-side Blazor component holds its message list and session ID in circuit memory. A browser refresh creates a new circuit and session. Earlier records can be fetched through InterviewData; UI conversation recovery would require additional implementation. See [session and data contracts](SESSION-DATA.md).
-
-Uploaded bytes are stored in the agent process's memory. The UI puts the returned URL into the chat, and MarkItDown must fetch it from its own container. Inspect the extraction result before using it as interview context. The [upload contract](USER-MANUAL.md#upload-contract) covers limits and retention.
-
-## Sample boundaries
-
-Use this learning sample in an access-restricted environment with fictional inputs. Development interfaces are mapped in the agent service, tools operate on supplied IDs, and document-derived content is untrusted. The [deployment reference](DEPLOYMENT.md#review-access-and-data-handling) describes the access-control and retention work to review before use with real users.
-
-## Changing the hosting model
-
-The optional Container Apps deployment hosts the existing .NET services. Moving agent execution into Foundry Agent Service is a separate architecture change. `LlmProvider` selects one of the two implemented model-provider paths.
-
-For a managed-agent migration, choose a runtime and definition format using the [Foundry Agent Service documentation](https://learn.microsoft.com/azure/ai-foundry/agents/overview). Map the identity and network path to both MCP servers, decide who owns conversation state, and trace the response back through `/ag-ui` to the Blazor client. That migration needs its own implementation and lifecycle, permissions, networking, and retention checks.
+`scripts/memory/`(Python)는 인덱스를 만들고 샘플 데이터를 저장합니다. .NET 프로젝트와는 독립적으로 동작합니다.

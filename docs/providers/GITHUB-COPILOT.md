@@ -1,6 +1,6 @@
 # GitHub Copilot configuration
 
-The standalone application supports GitHub Copilot as an optional model provider. The agents run in the .NET service and use the same InterviewData and MarkItDown services. Run this path from the repository using the main README. The workshop uses Foundry and omits this implementation from its downloads.
+The standalone application supports GitHub Copilot as an optional model provider. The agents run in the .NET service and use the Memory (MongoDB) and MarkItDown MCP services. Run it from the repository using the main README.
 
 ## Prerequisites
 

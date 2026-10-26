@@ -6,30 +6,23 @@ var mcpMarkItDown = builder.AddContainer(ResourceConstants.McpMarkItDown, "mcp/m
                            .WithHttpEndpoint(targetPort: 3001)
                            .WithArgs("--http", "--host", "0.0.0.0", "--port", "3001");
 
-// Azure Cosmos DB (NoSQL). Uses the local emulator in run mode and provisions a managed
-// account when published. Aspire creates the database and container as resources, so no
-// runtime resource creation is required (see the EnsureCreatedAsync note in the MCP server).
-var cosmos = builder.AddAzureCosmosDB(ResourceConstants.Cosmos);
-if (builder.ExecutionContext.IsRunMode)
-{
-    cosmos.RunAsEmulator(emulator => emulator.WithDataExplorer());
-}
+// MongoDB Atlas hosts the agent memory. The connection string and the Voyage AI key are
+// user-provided parameters (see docs/PREREQUISITES.md), not local containers.
+var mongodb = builder.AddConnectionString(ResourceConstants.MongoDb);
+var voyageApiKey = builder.AddParameter(ResourceConstants.VoyageApiKey, secret: true);
 
-var cosmosDb = cosmos.AddCosmosDatabase(ResourceConstants.CosmosDatabase);
-cosmosDb.AddContainer(ResourceConstants.CosmosContainer, "/id");
-
-var mcpInterviewData = builder.AddProject<Projects.InterviewCoach_Mcp_InterviewData>(ResourceConstants.McpInterviewData)
-                              .WithReference(cosmosDb)
-                              .WaitFor(cosmosDb);
+var mcpMemory = builder.AddProject<Projects.InterviewCoach_Mcp_Memory>(ResourceConstants.McpMemory)
+                       .WithReference(mongodb)
+                       .WithEnvironment("Voyage__ApiKey", voyageApiKey);
 
 var agent = builder.AddProject<Projects.InterviewCoach_Agent>(ResourceConstants.Agent)
                    .WithExternalHttpEndpoints()
                    .WithLlmReference(config, args)
-                   .WithEnvironment("AZURE_TENANT_ID", config["AZURE_TENANT_ID"] ?? string.Empty)
                    .WithReference(mcpMarkItDown.GetEndpoint("http"))
-                   .WithReference(mcpInterviewData)
+                   .WithReference(mongodb)
+                   .WithReference(mcpMemory)
                    .WaitFor(mcpMarkItDown)
-                   .WaitFor(mcpInterviewData);
+                   .WaitFor(mcpMemory);
 
 var webUI = builder.AddProject<Projects.InterviewCoach_WebUI>(ResourceConstants.WebUI)
                    .WithExternalHttpEndpoints()

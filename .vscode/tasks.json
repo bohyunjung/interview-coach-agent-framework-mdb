@@ -2,15 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Run: Microsoft Foundry",
-      "type": "shell",
-      "command": "aspire start --isolated -- --provider MicrosoftFoundry",
-      "group": "build",
-      "isBackground": true,
-      "problemMatcher": [],
-      "detail": "Run the app with Microsoft Foundry (recommended for production)"
-    },
-    {
       "label": "Run: GitHub Copilot",
       "type": "shell",
       "command": "aspire start --isolated -- --provider GitHubCopilot --mode HandOff",

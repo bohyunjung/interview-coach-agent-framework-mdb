@@ -1,14 +1,17 @@
 ﻿@page "/"
+@page "/chat/{SessionId:guid}"
 @using System.ComponentModel
 @using InterviewCoach.WebUI.Services
 @inject IChatClient ChatClient
 @inject ILogger<Chat> Logger
 @inject FileUploadService FileUploadService
+@inject ChatHistoryService ChatHistory
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <PageTitle>Chat</PageTitle>
 
-<ChatHeader OnNewChat="@ResetConversationAsync" />
+<ChatHeader OnNewChat="@StartNewChat" />
 
 <ChatMessageList Messages="@messages" InProgressMessage="@currentResponseMessage">
     <NoMessagesContent>
@@ -29,18 +32,52 @@
     private readonly ChatOptions chatOptions = new();
     private readonly List<ChatMessage> messages = new();
     private string sessionId = Guid.Empty.ToString();
-    private ChatMessage? systemPromptMessage;
-    private ChatMessage? sessionIdMessage;
     private CancellationTokenSource? currentResponseCancellation;
     private ChatMessage? currentResponseMessage;
     private ChatInput? chatInput;
 
+    private Guid? loadedSessionId;
+
+    [Parameter]
+    public Guid? SessionId { get; set; }
+
     protected override void OnInitialized()
+        => chatOptions.Tools = [];
+
+    // The session lives in the URL (/chat/{id}), so a refresh, a second tab or a shared link
+    // lands on the same conversation and its stored turns are loaded back.
+    protected override async Task OnParametersSetAsync()
     {
-        AddSessionSystemMessages();
-        chatOptions.Tools = [];
+        if (SessionId is not Guid id)
+        {
+            StartNewChat();
+            return;
+        }
+
+        if (loadedSessionId == id)
+        {
+            return;
+        }
+
+        CancelAnyCurrentResponse();
+        loadedSessionId = id;
+        sessionId = id.ToString("D");
         chatOptions.ConversationId = sessionId;
+
+        messages.Clear();
+        messages.Add(new(ChatRole.System, SystemPrompt));
+        messages.Add(new(ChatRole.System, $"SessionId: {sessionId}"));
+
+        var restored = await ChatHistory.GetAsync(id);
+        if (loadedSessionId == id)
+        {
+            messages.AddRange(restored);
+            Logger.LogInformation("Opened chat session {SessionId} with {MessageCount} stored messages", sessionId, restored.Count);
+        }
     }
+
+    private void StartNewChat()
+        => Navigation.NavigateTo($"/chat/{Guid.NewGuid():D}", replace: SessionId is null);
 
     private async Task AddUserMessageAsync(ChatMessage userMessage)
     {
@@ -155,28 +192,6 @@ ChatMessage responseMessage, CancellationToken cancellationToken)
         currentResponseMessage = null;
         currentResponseCancellation?.Cancel();
         currentResponseCancellation = null;
-    }
-
-    private async Task ResetConversationAsync()
-    {
-        CancelAnyCurrentResponse();
-        messages.Clear();
-        AddSessionSystemMessages();
-        chatOptions.ConversationId = sessionId;
-        await chatInput!.FocusAsync();
-    }
-
-    private void AddSessionSystemMessages()
-    {
-        sessionId = Guid.NewGuid().ToString();
-
-        systemPromptMessage = new(ChatRole.System, SystemPrompt);
-        sessionIdMessage = new(ChatRole.System, $"SessionId: {sessionId}");
-
-        messages.Add(systemPromptMessage);
-        messages.Add(sessionIdMessage);
-
-        Logger.LogInformation("Started new chat session with SessionId: {SessionId}", sessionId);
     }
 
     public void Dispose()

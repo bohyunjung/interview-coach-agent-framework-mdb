@@ -1,12 +1,9 @@
-using System.ClientModel.Primitives;
 using System.Collections.Concurrent;
-using System.Data.Common;
-
-using Azure.Identity;
 
 using GitHub.Copilot;
 
 using InterviewCoach.Agent;
+using InterviewCoach.Memory;
 
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.DevUI;
@@ -16,13 +13,13 @@ using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-using OpenAI;
-using OpenAI.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 
 builder.AddServiceDefaults();
+
+builder.Services.AddMongoMemory(config);
 
 builder.Services.AddHttpClient("mcp-markitdown", client =>
 {
@@ -55,16 +52,16 @@ builder.Services.AddKeyedSingleton<McpClient>("mcp-markitdown", (sp, obj) =>
 });
 
 
-builder.Services.AddHttpClient("mcp-interview-data", client =>
+builder.Services.AddHttpClient("mcp-memory", client =>
 {
-    client.BaseAddress = new Uri("https+http://mcp-interview-data");
+    client.BaseAddress = new Uri("https+http://mcp-memory");
 });
 
-builder.Services.AddKeyedSingleton<McpClient>("mcp-interview-data", (sp, obj) =>
+builder.Services.AddKeyedSingleton<McpClient>("mcp-memory", (sp, obj) =>
 {
     var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
     var httpClient = sp.GetRequiredService<IHttpClientFactory>()
-                       .CreateClient("mcp-interview-data");
+                       .CreateClient("mcp-memory");
     var endpoint = builder.Environment.IsDevelopment() == true
                  ? $"{httpClient.BaseAddress!.ToString().Replace("https+", string.Empty).TrimEnd('/')}"
                  : $"{httpClient.BaseAddress!.ToString().Replace("+http", string.Empty).TrimEnd('/')}";
@@ -79,7 +76,7 @@ builder.Services.AddKeyedSingleton<McpClient>("mcp-interview-data", (sp, obj) =>
     {
         ClientInfo = new Implementation()
         {
-            Name = "MCP Interview Data Client",
+            Name = "MCP Memory Client",
             Version = "1.0.0",
         }
     };
@@ -91,44 +88,7 @@ var llmProvider = Enum.TryParse<LlmProvider>(config[Constants.LlmProvider], igno
     ? parsedProvider
     : throw new InvalidOperationException($"LLM provider not specified or invalid. Please set the '{Constants.LlmProvider}' configuration value.");
 
-if (llmProvider == LlmProvider.MicrosoftFoundry)
-{
-    var connection = new DbConnectionStringBuilder() { ConnectionString = config.GetConnectionString("chat") };
-    var cogServicesEndpoint = (connection.TryGetValue("Endpoint", out var endpointValue) ? endpointValue?.ToString() : throw new InvalidOperationException("Missing Foundry Endpoint")) ?? throw new InvalidOperationException("Missing Foundry Endpoint");
-    var uri = new Uri(cogServicesEndpoint);
-    var host = uri.Host.Split('.')[0];
-    var model = connection.TryGetValue("Deployment", out var modelValue) ? modelValue?.ToString() : throw new InvalidOperationException("Missing Foundry Model");
-
-    var credentialOptions = new DefaultAzureCredentialOptions();
-    if (config["AZURE_TENANT_ID"] is { } tenantId)
-    {
-        credentialOptions.TenantId = tenantId;
-    }
-    if (builder.Environment.IsDevelopment())
-    {
-        // Locally there is no Managed Identity, so the IMDS probe fails with an
-        // "unreachable network" error (169.254.169.254) that aborts the credential
-        // chain before it reaches the Azure CLI credential. Exclude it during local
-        // development so `az login` is used; it stays enabled when deployed to Azure.
-        credentialOptions.ExcludeManagedIdentityCredential = true;
-    }
-
-    BearerTokenPolicy tokenPolicy = new(
-        new DefaultAzureCredential(credentialOptions),
-        "https://cognitiveservices.azure.com/.default");
-
-#pragma warning disable OPENAI001
-    ChatClient client = new(
-        authenticationPolicy: tokenPolicy,
-        model: model,
-        options: new OpenAIClientOptions()
-        {
-            Endpoint = new($"{uri.Scheme}://{host}.openai.azure.com/openai/v1/"),
-        });
-
-    builder.Services.AddSingleton(client.AsIChatClient());
-}
-else if (llmProvider == LlmProvider.GitHubCopilot)
+if (llmProvider == LlmProvider.GitHubCopilot)
 {
     var githubToken = config[Constants.GitHubToken];
 
@@ -164,6 +124,10 @@ app.MapOpenAIResponses();
 app.MapOpenAIConversations();
 
 app.MapAGUIServer(agentBuilder, "ag-ui");
+
+// The UI restores a conversation (page refresh, shared link) from the turns the middleware stored.
+app.MapGet("/chat/{sessionId:guid}/messages", async (Guid sessionId, IChatHistoryRepository history, CancellationToken ct) =>
+    ChatHistoryView.Collapse(await history.GetAsync(sessionId.ToString("D"), 500, ct)));
 
 // DevUI is intentionally mapped for both development and production environments,
 // so that the DevUI can be used to inspect the agent's state and behavior in production scenarios.
@@ -207,7 +171,11 @@ app.MapPost("/upload", async (HttpRequest request) =>
 
     uploadedFiles[fileId] = (ms.ToArray(), file.ContentType, file.FileName);
 
-    var url = $"{request.Scheme}://{request.Host}/uploads/{fileId}/{Uri.EscapeDataString(file.FileName)}";
+    // The URL is fetched by the MarkItDown container, where "localhost" is the container itself.
+    var host = request.Host.Host is "localhost" or "127.0.0.1" or "[::1]"
+        ? new HostString("host.docker.internal", request.Host.Port ?? (request.IsHttps ? 443 : 80))
+        : request.Host;
+    var url = $"{request.Scheme}://{host}/uploads/{fileId}/{Uri.EscapeDataString(file.FileName)}";
     return Results.Ok(new { url });
 });
 

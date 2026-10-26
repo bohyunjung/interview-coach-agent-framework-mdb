@@ -6,16 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.Azure" Version="13.*" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.*" />
-    <PackageVersion Include="Aspire.Hosting.Foundry" Version="13.*-*" />
-    <PackageVersion Include="Aspire.Microsoft.EntityFrameworkCore.Cosmos" Version="13.*" />
-    <PackageVersion Include="Azure.Identity" Version="1.*" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.*" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.*" />
     <PackageVersion Include="GitHub.Copilot.SDK" Version="1.*" />
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.*" />
     <PackageVersion Include="Microsoft.Agents.AI.AGUI" Version="1.*-*" />
     <PackageVersion Include="Microsoft.Agents.AI.DevUI" Version="1.*-*" />
-    <PackageVersion Include="Microsoft.Agents.AI.Foundry" Version="1.*-*" />
     <PackageVersion Include="Microsoft.Agents.AI.GitHub.Copilot" Version="1.*" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting" Version="1.*-*" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" Version="1.*-*" />

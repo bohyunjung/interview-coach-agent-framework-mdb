@@ -15,7 +15,7 @@ public class LlmResourceFactoryTests
     [Fact]
     public void GetProviderAndAgentMode_CommandLineOverridesConfiguration()
     {
-        var config = CreateConfiguration(CoreLlmProvider.MicrosoftFoundry, CoreAgentMode.Single);
+        var config = CreateConfiguration(CoreLlmProvider.GitHubCopilot, CoreAgentMode.Single);
 
         var (provider, mode) = CoreLlmResourceFactory.GetProviderAndAgentMode(
             config,
@@ -59,7 +59,7 @@ public class LlmResourceFactoryTests
     [Fact]
     public void GetProviderAndAgentMode_MissingCommandLineValueIsRejected()
     {
-        var config = CreateConfiguration(CoreLlmProvider.MicrosoftFoundry, CoreAgentMode.Single);
+        var config = CreateConfiguration(CoreLlmProvider.GitHubCopilot, CoreAgentMode.Single);
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => CoreLlmResourceFactory.GetProviderAndAgentMode(config, ["--provider"]));

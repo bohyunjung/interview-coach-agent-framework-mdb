@@ -1,73 +1,22 @@
-# Configuration reference
+# 설정
 
-## Entry points and precedence
+| 설정 | 위치 | 용도 |
+|---|---|---|
+| `ConnectionStrings:mongodb` | AppHost user secrets | Atlas 연결 문자열. 데이터베이스 이름은 `interview_coach`(`MONGODB_DATABASE`로 변경 가능) |
+| `Parameters:voyage-api-key` | AppHost user secrets | Atlas에서 발급한 Voyage AI API 키. Memory MCP에 `Voyage__ApiKey`로 전달됩니다. |
+| `Voyage:Model` / `Voyage:Dimensions` | 설정 | 기본값 `voyage-4-lite` / `1024`. 벡터 인덱스의 차원과 같아야 합니다. |
+| `Voyage:BaseUrl` | 설정 | 선택. 비워 두면 키 접두사로 정합니다(`al-`이면 `ai.mongodb.com`, 아니면 `api.voyageai.com`). |
+| `LlmProvider` | `apphost.settings.json` | `GitHubCopilot` |
+| `AgentMode` | `apphost.settings.json` | `HandOff` 또는 `Single`. [에이전트 모드](MULTI-AGENT.md) 참고 |
+| `GitHubCopilot:Model` | `apphost.settings.json` | 기본값 `gpt-5-mini` |
+| `GitHubCopilot:Token` | user secrets / `COPILOT_GITHUB_TOKEN` | 선택. 없으면 `gh auth login`으로 로그인한 사용자를 씁니다. |
 
-Use this reference for the completed application. Workshop `02-starter` is cloud-free: the supplied `WorkshopHosting.cs` helper is inactive, and the model reference is added in the first-agent lesson.
+`.env`의 값을 user secrets에 등록하는 명령입니다. `.env`가 Windows 줄바꿈(CRLF)이어도 값이 깨지지 않도록 `\r`을 먼저 제거합니다.
 
-The root `apphost.cs` loads `apphost.settings.json` and user secrets. The project-based AppHost uses `src/InterviewCoach.AppHost/appsettings.json` and is the deployment target in `azure.yaml`. Configure each entry point through its own settings.
-
-Core workshop orchestration edits use root `apphost.cs`, including the final lessons. The learner's project-based AppHost and settings stay in their starter state unless the learner follows the optional deployment setup. The repository source already contains both completed entry points. See [workshop startup helpers](ARCHITECTURE.md#workshop-startup-helpers).
-
-`LlmResourceFactory.GetProviderAndAgentMode` reads configuration, then applies `--provider`/`-p` and `--mode`/`-m` arguments. Missing or invalid provider/mode values are rejected.
-
-```bash
-# Bash
-aspire start --apphost ./apphost.cs -- --provider MicrosoftFoundry --mode Single
+```sh
+set -a; source <(tr -d '\r' < .env); set +a
+dotnet user-secrets --file ./apphost.cs set ConnectionStrings:mongodb "$MONGODB_URI"
+dotnet user-secrets --file ./apphost.cs set Parameters:voyage-api-key "$VOYAGE_API_KEY"
 ```
 
-```powershell
-# PowerShell
-aspire start --apphost ./apphost.cs -- --provider MicrosoftFoundry --mode Single
-```
-
-## Settings
-
-| Key | Values / purpose |
-| --- | --- |
-| `LlmProvider` | `MicrosoftFoundry` or `GitHubCopilot` |
-| `AgentMode` | `Single` or `HandOff` |
-| `MicrosoftFoundry:DeploymentName` | Model name supplied when provisioning; the Azure deployment is named `chat` |
-| `MicrosoftFoundry:ModelVersion` | Requested model version |
-| `MicrosoftFoundry:ModelFormat` | Model format, currently `OpenAI` |
-| `MicrosoftFoundry:SkuName` | Requested SKU |
-| `MicrosoftFoundry:SkuCapacity` | Requested capacity; validate quota and suitability for your environment |
-| `MicrosoftFoundry:UseExisting` | `true` selects existing-resource references and disables the model-provisioning path |
-| `MicrosoftFoundry:Existing:Name` | Existing Foundry account name |
-| `MicrosoftFoundry:Existing:ResourceGroup` | Resource group containing that account |
-| `MicrosoftFoundry:Existing:SubscriptionId` | Subscription GUID containing that account |
-| `MicrosoftFoundry:Existing:DeploymentName` | Actual Azure deployment name, often `chat`; all four existing identifiers are required together |
-| `Azure:AllowResourceGroupCreation` | Must be `false` for local Foundry reuse |
-| `GitHubCopilot:Model` | Copilot model selection |
-| `GitHubCopilot:Token` | Optional token, kept in private configuration |
-| `COPILOT_GITHUB_TOKEN` | Alternative optional token setting |
-
-The checked-in Foundry settings use `gpt-5-mini`, model version `2025-08-07`, `OpenAI`, `GlobalStandard`, and capacity `100`. Confirm availability, quota, and approval for those values in your environment. The factory falls back to model version `1` when the setting is omitted, so keep the explicit version and verify it for the selected model.
-
-## Agent-side configuration
-
-Aspire supplies provider/mode environment variables and the `chat` connection string. The Foundry branch extracts `Endpoint` and `Deployment`, creates the OpenAI-compatible client, and requests a token for `https://cognitiveservices.azure.com/.default`.
-
-`AZURE_TENANT_ID` can set the credential tenant. The development path excludes the managed-identity probe and uses available developer credentials. Check the deployed identity's access separately against the actual provisioned resources. The [Foundry authentication reference](providers/MICROSOFT-FOUNDRY.md#authenticate) describes this path.
-
-## Response language
-
-Both providers and both agent modes share server-side response-language instructions.
-An explicit language request takes priority; otherwise, agents use the primary language
-of the user's own messages. Documents, URLs, quotations, and tool results do not determine
-the response language. Short or ambiguous replies retain the established conversation
-language, including across specialist handoffs. Product names, code, and necessary
-source quotations can remain in their original language. These instructions do not
-translate tool names, structured arguments, or stored source documents, and require no
-additional configuration.
-
-## Service references
-
-The UI references `agent`. The agent references `mcp-markitdown` and `mcp-interview-data`. InterviewData references the Cosmos database. Prefer these resource references over hard-coded local ports.
-
-Keep application credentials in private configuration. Static website content is public; use fictional documents in examples.
-
-## Provisioning scope
-
-The standalone repository's default `WithLlmReference` path provisions Foundry resources. With explicit reuse enabled, it resolves an existing account and deployment through a reference-only ARM template. It does not create model resources, modify capacity, or assign roles; missing settings or failed resolution stop the app without a provisioning fallback. See [existing-resource configuration](providers/MICROSOFT-FOUNDRY.md#reuse-an-existing-account-and-deployment).
-
-Learner archives require reuse and remove the repository's inherited user-secrets ID. Their file-based AppHost gets a stable, path-specific store. Configure a newly extracted folder separately rather than copying the example's secrets file or cached deployment state. The example and learner share model-resource ownership; cloud resources remain until [cleanup](DEPLOYMENT.md#remove-only-the-resources-you-own).
+Python 스크립트는 `.env`([.env.sample](../.env.sample))에서 `MONGODB_URI`와 `VOYAGE_API_KEY`를 읽습니다. 필요하면 `MONGODB_DATABASE`, `VOYAGE_MODEL`, `VOYAGE_DIMENSIONS`, `CHAT_MESSAGES_TTL_DAYS`(기본 30일)도 지정할 수 있습니다. Atlas 네트워크와 사용자 설정은 [준비 사항](PREREQUISITES.md)을 보세요. `.env`와 키는 커밋하지 않습니다.

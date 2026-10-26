@@ -21,7 +21,6 @@ public enum AgentMode
 
 public enum LlmProvider
 {
-    MicrosoftFoundry,
     GitHubCopilot
 }
 
@@ -36,6 +35,24 @@ public static class AgentDelegateFactory
         - Preserve the user's language preference across handoffs to other interview specialists.
         - Product names, code, and necessary source quotations may remain in their original language.
         - Apply these rules to user-facing responses, not tool names, structured arguments, or stored source documents.
+        """;
+
+    internal const string MemoryCoachInstructions = """
+        You are the Memory Coach for an AI Interview Coach system.
+        You answer questions about the user's past interviews and feedback, using ONLY the memory tools.
+
+        Choose the tool by the question:
+        - A specific company or a date ("when was my interview at X", "summarize the feedback from X"): find_interviews_by_company.
+        - The latest interviews ("my last interview", "my last 3 interviews"): list_recent_interviews.
+        - Feedback that repeats across recent interviews ("common feedback in my last 5 interviews"): get_recent_feedback_items
+          with that interviewCount. Group items by theme yourself, then report each theme with the number of interviews and companies.
+        - A skill or trait described in the user's own words ("which company liked my debugging?"): search_feedback.
+          Check each hit's text and score and mention only hits that really match; say so when none do.
+        - The overall picture, strengths and growth areas over time: get_user_profile.
+
+        Quote dates and company names exactly as returned. Never invent interviews or feedback; when the tools return
+        nothing relevant, say that nothing is stored. When done, or if the user wants to practise, hand off to "triage".
+        Always maintain a supportive and encouraging tone.
         """;
 
     public static IHostedAgentBuilder AddAIAgent(this IHostApplicationBuilder builder, string name)
@@ -53,7 +70,7 @@ public static class AgentDelegateFactory
 
         IHostedAgentBuilder agentBuilder = mode switch
         {
-            AgentMode.Single => builder.AddAIAgent(name, CreateSingleAgent),
+            AgentMode.Single => builder.AddAIAgent(name, (sp, key) => CreateSingleAgent(sp, key).WithShortTermMemory(sp)),
             AgentMode.HandOff => builder.AddHandOffWorkflow(name, CreateHandOffWorkflow),
             _ => throw new NotSupportedException($"The specified agent mode '{mode}' is not supported.")
         };
@@ -70,7 +87,8 @@ public static class AgentDelegateFactory
             var workflow = sp.GetRequiredKeyedService<Workflow>(key);
 
             return workflow.AsAIAgent(name: key)
-                           .CreateFixedAgent();
+                           .CreateFixedAgent()
+                           .WithShortTermMemory(sp);
         });
     }
 
@@ -87,16 +105,6 @@ public static class AgentDelegateFactory
         var provider = Enum.TryParse<LlmProvider>(config[Constants.LlmProvider], ignoreCase: true, out var parsedProvider)
             ? parsedProvider
             : throw new InvalidOperationException($"LLM provider not specified or invalid. Please set the '{Constants.LlmProvider}' configuration value.");
-
-        if (provider == LlmProvider.MicrosoftFoundry)
-        {
-            return new ChatClientAgent(
-                chatClient: services.GetRequiredService<IChatClient>(),
-                name: name,
-                description: description,
-                instructions: instructions,
-                tools: tools);
-        }
 
         if (provider != LlmProvider.GitHubCopilot)
         {
@@ -288,15 +296,18 @@ public static class AgentDelegateFactory
     // MODE 1: Single Agent
     // The original monolithic agent that handles the entire interview process.
     // It has access to all MCP tools (MarkItDown for document parsing and
-    // InterviewData for session management) and follows a linear interview flow.
+    // Memory for session management and long-term recall) and follows a linear interview flow.
     // ============================================================================
     private static AIAgent CreateSingleAgent(IServiceProvider sp, string key)
     {
         var markitdown = sp.GetRequiredKeyedService<McpClient>("mcp-markitdown");
-        var interviewData = sp.GetRequiredKeyedService<McpClient>("mcp-interview-data");
+        var memory = sp.GetRequiredKeyedService<McpClient>("mcp-memory");
 
         var markitdownTools = markitdown.ListToolsAsync().GetAwaiter().GetResult();
-        var interviewDataTools = interviewData.ListToolsAsync().GetAwaiter().GetResult();
+        var memoryTools = memory.ListToolsAsync().GetAwaiter().GetResult();
+        var sessionTools = MemoryToolSets.SessionTools(memoryTools);
+        var recallTools = MemoryToolSets.RecallTools(memoryTools);
+        var consolidationTools = MemoryToolSets.ConsolidationTools(memoryTools);
 
         var agent = CreateProviderAgent(
             services: sp,
@@ -315,21 +326,30 @@ public static class AgentDelegateFactory
                 03. Once you have the session, then keep using this session record for all subsequent interactions. DO NOT create a new session again.
                 04. Ask the user to provide their resume link or allow them to proceed without it. The user may provide the resume in text form if they prefer.
                 05. Next, request the job description link or let them proceed without it. The user may provide the job description in text form if they prefer.
-                06. Once you have the necessary information, update the session record with it.
+                06. Once you have the necessary information, update the session record with it, including CompanyName and RoleTitle taken from the job description when known.
                 07. Once you have updated the session record with the information, begin the interview by asking behavioral questions first.
                 08. After completing the behavioral questions, switch to technical questions.
                 09. Before switching, ask the user to continue behavioral questions or move on to technical questions.
                 10. The user may stop at any time. Generate a summary with an overview, strengths, areas for improvement, and recommendations.
                 11. Save the summary with update_interview_session, then call complete_interview_session with the same ID.
                     Confirm completion only when the returned record has IsCompleted true.
+                    Then consolidate long-term memory: call save_session_feedback with the summary and the feedback items
+                    (see the item rules below), then call get_user_profile and save_user_profile with the merged profile.
                 12. Record questions, answers, feedback and the summary as they occur. Before each update, fetch the record
                     and preserve all six resume/job fields. Set Transcript to ONLY the new text to append.
                     Never copy the stored transcript into an update; the repository appends it.
                     If a tool fails, report the failure and do not claim the change was saved.
 
+                Feedback item rules: 3-8 items, one strength or one improvement point each. Kind is 'strength' or 'improvement',
+                Topic is a short label, Text is one self-contained sentence with the concrete evidence from the interview.
+
+                Past interviews: when the user asks about earlier interviews or feedback patterns, answer from memory with
+                list_recent_interviews, find_interviews_by_company, get_recent_feedback_items, search_feedback and get_user_profile.
+                Only state what the tools return; say so when nothing relevant is stored.
+
                 Always maintain a supportive and encouraging tone.
                 """,
-            tools: [.. markitdownTools, .. interviewDataTools]
+            tools: [.. markitdownTools, .. sessionTools, .. recallTools, .. consolidationTools.Where(t => t.Name != "get_user_profile")]
         );
 
         return agent;
@@ -352,10 +372,13 @@ public static class AgentDelegateFactory
     private static Workflow CreateHandOffWorkflow(IServiceProvider sp, string key)
     {
         var markitdown = sp.GetRequiredKeyedService<McpClient>("mcp-markitdown");
-        var interviewData = sp.GetRequiredKeyedService<McpClient>("mcp-interview-data");
+        var memory = sp.GetRequiredKeyedService<McpClient>("mcp-memory");
 
         var markitdownTools = markitdown.ListToolsAsync().GetAwaiter().GetResult();
-        var interviewDataTools = interviewData.ListToolsAsync().GetAwaiter().GetResult();
+        var memoryTools = memory.ListToolsAsync().GetAwaiter().GetResult();
+        var sessionTools = MemoryToolSets.SessionTools(memoryTools);
+        var recallTools = MemoryToolSets.RecallTools(memoryTools);
+        var consolidationTools = MemoryToolSets.ConsolidationTools(memoryTools);
 
         // --- Triage Agent ---
         // Routes user messages to the correct specialist. No tools — pure routing.
@@ -379,8 +402,11 @@ public static class AgentDelegateFactory
                   2. Behavioural Interviewer
                   3. Technical Interviewer
                   4. Summariser
+                Questions about past interviews can come at any time and go to the Memory Coach.
 
                 Routing rules (apply in order; the latest user request takes priority over earlier messages):
+                - If the user asks about past interviews, earlier feedback, patterns across interviews, or their profile
+                  (for example "when was my interview at X" or "what feedback do I get repeatedly"), hand off to "memory_coach".
                 - If the user wants to stop or finish, hand off to "summariser" immediately.
                   Do not restart intake or ask another interview question.
                 - If the latest message supplies a new or replacement resume or job description, hand off to
@@ -426,13 +452,14 @@ public static class AgentDelegateFactory
                    A failed fetch does not complete intake. Ask for corrected input or explicit permission to skip it.
                    Before each update, call get_interview_session and preserve all six resume/job fields.
                    Set Transcript to ONLY new text to append, and verify the returned document fields before handoff.
+                   Also set CompanyName and RoleTitle from the job description when you can tell them.
                 5. Once document intake is complete, let the user know and hand off directly to "behavioural_interviewer"
                    to begin the interview. Only hand off to "triage" if the user wants to do something unexpected.
 
                 The user may choose to proceed without a resume or job description — that's fine.
                 Always maintain a supportive and encouraging tone.
                 """,
-            tools: [.. markitdownTools, .. interviewDataTools]);
+            tools: [.. markitdownTools, .. sessionTools]);
 
         // --- Behavioural Interviewer Agent ---
         // Conducts the behavioural part of the interview.
@@ -459,7 +486,7 @@ public static class AgentDelegateFactory
                 Use the STAR method (Situation, Task, Action, Result) to guide your questions.
                 Always maintain a supportive and encouraging tone.
                 """,
-            tools: [.. interviewDataTools]);
+            tools: [.. sessionTools]);
 
         // --- Technical Interviewer Agent ---
         // Conducts the technical part of the interview.
@@ -486,7 +513,7 @@ public static class AgentDelegateFactory
                 Focus on practical, real-world scenarios relevant to the job.
                 Always maintain a supportive and encouraging tone.
                 """,
-            tools: [.. interviewDataTools]);
+            tools: [.. sessionTools]);
 
         // --- Summariser Agent ---
         // Generates the final interview summary.
@@ -512,12 +539,27 @@ public static class AgentDelegateFactory
                    in Transcript. The repository appends it; never send the stored transcript again.
                 4. Call complete_interview_session with the same ID. Confirm completion only when its returned
                    record has IsCompleted true. Report tool failures honestly.
-                5. Present the summary to the user.
-                6. Hand off back to triage in case the user wants to do anything else.
+                5. Consolidate long-term memory. Call save_session_feedback with the session ID, the feedback summary,
+                   and 3-8 feedback items. Each item is ONE strength or ONE improvement point: Kind is 'strength' or
+                   'improvement', Topic is a short label, Text is one self-contained sentence with the concrete evidence.
+                6. Call get_user_profile, merge this interview into it (reuse existing topic wording for the same theme,
+                   add this session's ID as evidence, and update growth area Status: recurring, improving or resolved),
+                   then call save_user_profile with the complete lists.
+                7. Present the summary to the user.
+                8. Hand off back to triage in case the user wants to do anything else.
 
                 Always maintain a supportive and encouraging tone.
                 """,
-            tools: [.. interviewDataTools]);
+            tools: [.. sessionTools, .. consolidationTools]);
+
+        // --- Memory Coach Agent ---
+        // Answers questions about past interviews from long-term memory. Read-only tools.
+        var memoryCoachAgent = CreateProviderAgent(
+            services: sp,
+            name: "memory_coach",
+            description: "Answers questions about past interviews and long-term feedback patterns.",
+            instructions: MemoryCoachInstructions,
+            tools: [.. recallTools]);
 
         // Build the handoff workflow — sequential chain with Triage as fallback.
         // FIX: Changed from pure hub-and-spoke (every specialist → Triage → next)
@@ -529,11 +571,12 @@ public static class AgentDelegateFactory
 
         var workflow = AgentWorkflowBuilder
                        .CreateHandoffBuilderWith(triageAgent)
-                       .WithHandoffs(triageAgent, [receptionistAgent, behaviouralAgent, technicalAgent, summariserAgent])
+                       .WithHandoffs(triageAgent, [receptionistAgent, behaviouralAgent, technicalAgent, summariserAgent, memoryCoachAgent])
                        .WithHandoffs(receptionistAgent, [behaviouralAgent, triageAgent])
                        .WithHandoffs(behaviouralAgent, [technicalAgent, triageAgent])
                        .WithHandoffs(technicalAgent, [summariserAgent, triageAgent])
                        .WithHandoff(summariserAgent, triageAgent)
+                       .WithHandoff(memoryCoachAgent, triageAgent)
                        .Build();
 #pragma warning restore MAAIW001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 

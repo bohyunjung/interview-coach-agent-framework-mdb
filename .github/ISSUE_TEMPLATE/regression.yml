@@ -36,14 +36,14 @@ body:
     id: last-working-version
     attributes:
       label: Last known working version
-      description: Provide the release, commit, or workshop checkpoint where you last observed this working.
+      description: Provide the release, or commit where you last observed this working.
     validations:
       required: true
   - type: input
     id: first-failing-version
     attributes:
       label: First known failing version
-      description: Provide the earliest release, commit, or workshop checkpoint where you observed the failure.
+      description: Provide the earliest release, or commit where you observed the failure.
     validations:
       required: true
   - type: input

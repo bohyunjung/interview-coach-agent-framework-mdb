@@ -1,0 +1,68 @@
+[
+  {
+    "_id": "a1000000-0000-4000-8000-000000000001",
+    "companyName": "Harborline Payments",
+    "roleTitle": "Backend Engineer",
+    "createdAt": "2026-07-21T05:00:00Z",
+    "completedAt": "2026-07-21T05:42:00Z",
+    "resumeText": "Jiwoo Han: six years building C#/.NET services on PostgreSQL. Led an order-processing rewrite that added retries and reconciliation.",
+    "jobDescriptionText": "Backend Engineer, Ledger Services. Build payment authorization and settlement APIs in C# on PostgreSQL. Own reliability: idempotency, retries and reconciliation. Join the on-call rotation.",
+    "transcript": "Interviewer: How would you design a payment capture API that clients may retry?\nCandidate: Require an idempotency key, store the result of the first attempt and return it for repeats. If the processor times out, mark the payment pending and reconcile later.\nInterviewer: Why PostgreSQL for the idempotency store rather than a cache?\nCandidate: It is what we already run, so it was the simplest option.\nInterviewer: What latency target would you set for capture?\nCandidate: As fast as possible.",
+    "feedback": "Strong handling of client retries and processor timeouts. Improve by stating trade-offs before the implementation and by giving concrete numeric targets instead of 'as fast as possible'."
+  },
+  {
+    "_id": "a1000000-0000-4000-8000-000000000002",
+    "companyName": "Kestrel Commerce",
+    "roleTitle": "Full-Stack Engineer",
+    "createdAt": "2026-08-11T06:00:00Z",
+    "completedAt": "2026-08-11T06:38:00Z",
+    "resumeText": "Jiwoo Han: backend-focused engineer with React experience from an internal admin portal, shipping features from schema to UI.",
+    "jobDescriptionText": "Full-Stack Engineer for checkout and catalog. React front end, .NET API, PostgreSQL. Own features end to end, from data model to user interface.",
+    "transcript": "Interviewer: Walk me through a feature you delivered end to end.\nCandidate: I added bulk order editing: a new table, an endpoint with optimistic concurrency, and a grid in React that shows conflicts inline.\nInterviewer: Design a cart service for our checkout.\nCandidate: I would start with a Cart table and a REST API with add, remove and checkout endpoints.\nInterviewer: Why REST rather than GraphQL?\nCandidate: REST is what I know best.",
+    "feedback": "Good end-to-end ownership. Ask clarifying questions before designing, and compare REST and GraphQL for this client mix instead of defaulting to familiarity."
+  },
+  {
+    "_id": "a1000000-0000-4000-8000-000000000003",
+    "companyName": "Lumenfield AI",
+    "roleTitle": "AI Engineer",
+    "createdAt": "2026-08-28T07:00:00Z",
+    "completedAt": "2026-08-28T07:45:00Z",
+    "resumeText": "Jiwoo Han: backend engineer who built a retrieval-augmented support assistant for an internal helpdesk as a side project.",
+    "jobDescriptionText": "AI Engineer, retrieval and agents for enterprise support. Build and evaluate RAG pipelines, and manage latency and cost in production.",
+    "transcript": "Interviewer: Describe how you would build retrieval over a large help center.\nCandidate: Chunk by document structure, combine keyword and vector retrieval, rerank, and cite the source passages in each answer.\nInterviewer: How do you know retrieval is good?\nCandidate: I read sample answers and check that they look right.\nInterviewer: Tell me about your support assistant.\nCandidate: It worked well and people liked it.",
+    "feedback": "Practical RAG pipeline design. Missing: a way to measure retrieval quality, numbers for project results, and a stated cost and latency trade-off for model choices."
+  },
+  {
+    "_id": "a1000000-0000-4000-8000-000000000004",
+    "companyName": "Northgate Cloud",
+    "roleTitle": "Backend Platform Engineer",
+    "createdAt": "2026-09-16T05:30:00Z",
+    "completedAt": "2026-09-16T06:12:00Z",
+    "resumeText": "Jiwoo Han: backend engineer with production on-call experience, tracing and alerting, and a background-job runner built on queues.",
+    "jobDescriptionText": "Backend Platform Engineer for an internal job scheduling and event pipeline. Own reliability, observability and service-level objectives for thousands of tenant workloads.",
+    "transcript": "Interviewer: A tenant reports jobs finishing late. How do you investigate?\nCandidate: Check queue depth and consumer lag in metrics, then follow a slow job's trace to find the stalled dependency, and only then look at logs.\nInterviewer: How should failed jobs behave?\nCandidate: Bounded retries with backoff, then a dead-letter queue with an alert so poison messages do not block the queue.\nInterviewer: Queue or cron-based scheduler?\nCandidate: A queue. We handle a lot of jobs.",
+    "feedback": "Excellent observability-driven debugging and failure handling. Compare delivery guarantees before choosing a queue, and quantify scale instead of saying 'a lot of jobs'."
+  },
+  {
+    "_id": "a1000000-0000-4000-8000-000000000005",
+    "companyName": "Tessera Health",
+    "roleTitle": "Full-Stack Engineer",
+    "createdAt": "2026-10-06T06:00:00Z",
+    "completedAt": "2026-10-06T06:40:00Z",
+    "resumeText": "Jiwoo Han: full-stack engineer with .NET and React, interested in regulated domains and accessible interfaces.",
+    "jobDescriptionText": "Full-Stack Engineer for a patient scheduling portal. Work with sensitive health data, accessibility requirements and clinic integrations.",
+    "transcript": "Interviewer: Design a patient scheduling portal.\nCandidate: First, who books appointments, how many clinics are involved, and which privacy rules apply?\nInterviewer: Good. How would you handle patient data?\nCandidate: Encrypt at rest, restrict access by role, and write an audit log for every read of patient records.\nInterviewer: What did your admin portal change for users?\nCandidate: It made bulk edits much easier for the operations team.",
+    "feedback": "Opened with the right clarifying questions and raised privacy unprompted. Still describing project outcomes qualitatively; add measurable results."
+  },
+  {
+    "_id": "a1000000-0000-4000-8000-000000000006",
+    "companyName": "Quillstream",
+    "roleTitle": "AI Engineer",
+    "createdAt": "2026-10-22T06:00:00Z",
+    "completedAt": "2026-10-22T06:48:00Z",
+    "resumeText": "Jiwoo Han: engineer building agentic workflows with tool calling, handoffs and an evaluation harness on top of production backend experience.",
+    "jobDescriptionText": "AI Engineer, agentic workflows for analyst tooling. Design tools and guardrails, evaluate agent behavior and manage conversational memory.",
+    "transcript": "Interviewer: Single agent or a handoff workflow for our analyst assistant?\nCandidate: A single agent is cheaper and easier to debug, but tool sprawl hurts accuracy. Handoffs add latency and cost per transfer but let each specialist have narrow tools. For your analyst flows I would start with handoffs.\nInterviewer: How do you keep tools safe?\nCandidate: Narrow typed tools, confirmation before destructive actions, and read-only tools for the recall agent.\nInterviewer: How would you evaluate it?\nCandidate: An offline set of tasks scored on task success and tool-call accuracy.\nInterviewer: What did your last project achieve?\nCandidate: It improved the team's workflow significantly.",
+    "feedback": "Clear trade-off reasoning, strong tool and guardrail design and a concrete evaluation plan. Results are still not quantified; lead each story with one number."
+  }
+]

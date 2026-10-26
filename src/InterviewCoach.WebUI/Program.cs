@@ -23,6 +23,7 @@ builder.Services.AddHttpClient("agent", client =>
 #pragma warning restore EXTEXP0001
 
 builder.Services.AddScoped<FileUploadService>();
+builder.Services.AddScoped<ChatHistoryService>();
 
 builder.Services.AddChatClient(sp => new AGUIChatClient(
     httpClient: sp.GetRequiredService<IHttpClientFactory>().CreateClient("agent"),

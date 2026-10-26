@@ -5,13 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Search existing issues before submitting. Use this form for reference documentation and workshop lessons.
+        Search existing issues before submitting. Use this form for reference documentation.
         Use fictional examples and redact credentials, account details, and transcript contents. Do not post real interview records.
   - type: input
     id: location
     attributes:
       label: Documentation location
-      description: Provide the page URL, file path, or workshop lesson and checkpoint. For missing documentation, describe where it belongs.
+      description: Provide the page URL, or file path. For missing documentation, describe where it belongs.
     validations:
       required: true
   - type: textarea

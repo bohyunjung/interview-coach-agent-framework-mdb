@@ -1,0 +1,28 @@
+[
+  {"_id": "fi-1-1", "sessionId": "a1000000-0000-4000-8000-000000000001", "kind": "strength", "topic": "handling failures and retries", "text": "Handled client retries and processor timeouts well: idempotency keys, a stored first result, and a pending state with later reconciliation."},
+  {"_id": "fi-1-2", "sessionId": "a1000000-0000-4000-8000-000000000001", "kind": "improvement", "topic": "explain trade-offs before implementation", "text": "State the trade-off before the implementation. You chose PostgreSQL for the idempotency store without comparing it to a cache on consistency and latency."},
+  {"_id": "fi-1-3", "sessionId": "a1000000-0000-4000-8000-000000000001", "kind": "improvement", "topic": "give numeric targets", "text": "Give numbers. 'As fast as possible' is not a target; propose a p99 latency and an acceptable duplicate-charge rate."},
+
+  {"_id": "fi-2-1", "sessionId": "a1000000-0000-4000-8000-000000000002", "kind": "strength", "topic": "end-to-end ownership", "text": "Walked through a feature from database schema to API to UI and named who is affected at each layer."},
+  {"_id": "fi-2-2", "sessionId": "a1000000-0000-4000-8000-000000000002", "kind": "improvement", "topic": "ask clarifying questions first", "text": "Started designing the cart service immediately. Ask about traffic, consistency needs and users before drawing boxes."},
+  {"_id": "fi-2-3", "sessionId": "a1000000-0000-4000-8000-000000000002", "kind": "improvement", "topic": "compare alternatives", "text": "Picked REST over GraphQL without comparing them. Say what you give up with each choice for this mix of clients."},
+
+  {"_id": "fi-3-1", "sessionId": "a1000000-0000-4000-8000-000000000003", "kind": "strength", "topic": "practical RAG pipeline design", "text": "Described a practical retrieval pipeline: chunking by document structure, hybrid keyword and vector retrieval, reranking, and citations in answers."},
+  {"_id": "fi-3-2", "sessionId": "a1000000-0000-4000-8000-000000000003", "kind": "improvement", "topic": "evaluate retrieval quality", "text": "No answer for how retrieval quality is measured. Name recall@k or answer-faithfulness checks and how you would build a labeled set."},
+  {"_id": "fi-3-3", "sessionId": "a1000000-0000-4000-8000-000000000003", "kind": "improvement", "topic": "quantify project results", "text": "You said the support assistant 'worked well'. Give resolution rate, latency or cost numbers instead."},
+  {"_id": "fi-3-4", "sessionId": "a1000000-0000-4000-8000-000000000003", "kind": "improvement", "topic": "cost and latency trade-offs", "text": "Did not discuss the cost and latency trade-off between larger models and caching or smaller models. State it before choosing."},
+
+  {"_id": "fi-4-1", "sessionId": "a1000000-0000-4000-8000-000000000004", "kind": "strength", "topic": "observability-driven debugging", "text": "Debugged from metrics and traces rather than guesswork, and defined what each alert should tell the on-call engineer."},
+  {"_id": "fi-4-2", "sessionId": "a1000000-0000-4000-8000-000000000004", "kind": "strength", "topic": "handling failures and retries", "text": "Designed bounded retries with backoff and a dead-letter queue, and explained how poison messages are isolated."},
+  {"_id": "fi-4-3", "sessionId": "a1000000-0000-4000-8000-000000000004", "kind": "improvement", "topic": "explain trade-offs before implementation", "text": "Chose a queue over a cron-based scheduler without saying why. Compare delivery guarantees, operational cost and ordering before deciding."},
+  {"_id": "fi-4-4", "sessionId": "a1000000-0000-4000-8000-000000000004", "kind": "improvement", "topic": "give numeric targets", "text": "Scale was 'a lot of jobs'. Put numbers on throughput, queue depth and the retry budget."},
+
+  {"_id": "fi-5-1", "sessionId": "a1000000-0000-4000-8000-000000000005", "kind": "strength", "topic": "ask clarifying questions first", "text": "Opened with questions about who books appointments, how many clinics and which privacy rules apply before proposing a design."},
+  {"_id": "fi-5-2", "sessionId": "a1000000-0000-4000-8000-000000000005", "kind": "strength", "topic": "privacy and security awareness", "text": "Raised protected health data handling, audit logging and least-privilege access without being asked."},
+  {"_id": "fi-5-3", "sessionId": "a1000000-0000-4000-8000-000000000005", "kind": "improvement", "topic": "quantify project results", "text": "Past project outcomes were qualitative. Add measurable results such as time saved or error rate reduction."},
+
+  {"_id": "fi-6-1", "sessionId": "a1000000-0000-4000-8000-000000000006", "kind": "strength", "topic": "explain trade-offs before implementation", "text": "Compared a single agent with a handoff workflow, explaining latency, debuggability and cost of each before choosing."},
+  {"_id": "fi-6-2", "sessionId": "a1000000-0000-4000-8000-000000000006", "kind": "strength", "topic": "tool design and guardrails", "text": "Designed narrow typed tools, confirmation before destructive actions and read-only tools for recall, limiting the agent's blast radius."},
+  {"_id": "fi-6-3", "sessionId": "a1000000-0000-4000-8000-000000000006", "kind": "strength", "topic": "evaluate agent behavior", "text": "Proposed an offline evaluation set scored on task success and tool-call accuracy, a clear improvement over earlier interviews."},
+  {"_id": "fi-6-4", "sessionId": "a1000000-0000-4000-8000-000000000006", "kind": "improvement", "topic": "quantify project results", "text": "Results were still not quantified. Lead each project story with one number."}
+]

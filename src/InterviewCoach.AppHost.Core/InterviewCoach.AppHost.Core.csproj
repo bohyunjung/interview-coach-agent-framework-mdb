@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.Foundry" />
+    <PackageReference Include="Aspire.Hosting" />
   </ItemGroup>
 
   <ItemGroup>

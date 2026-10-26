@@ -7,11 +7,13 @@
 
     // Auto-submit the form on 'enter' keypress
     elem.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            elem.dispatchEvent(new CustomEvent('change', { bubbles: true }));
-            elem.closest('form').dispatchEvent(new CustomEvent('submit', { bubbles: true, cancelable: true }));
-        }
+        if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+
+        e.preventDefault();
+        if (e.repeat) return;
+
+        elem.dispatchEvent(new CustomEvent('change', { bubbles: true }));
+        elem.form?.requestSubmit();
     });
 }
 

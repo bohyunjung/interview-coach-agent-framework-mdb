@@ -6,16 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.Azure.CosmosDB" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\InterviewCoach.AppHost.Core\InterviewCoach.AppHost.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\InterviewCoach.Agent\InterviewCoach.Agent.csproj" />
-    <ProjectReference Include="..\InterviewCoach.Mcp.InterviewData\InterviewCoach.Mcp.InterviewData.csproj" />
+    <ProjectReference Include="..\InterviewCoach.Mcp.Memory\InterviewCoach.Mcp.Memory.csproj" />
     <ProjectReference Include="..\InterviewCoach.WebUI\InterviewCoach.WebUI.csproj" />
   </ItemGroup>
 

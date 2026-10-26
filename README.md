@@ -1,74 +1,44 @@
-# Interview Coach with Microsoft Agent Framework
+# Interview Coach: MongoDB로 만든 에이전트 메모리
 
-An interview-practice application built with Microsoft Agent Framework, models hosted in Microsoft Foundry, MCP tools, and Aspire. It collects a resume and job description, asks behavioural and technical questions, gives feedback, and saves an interview summary.
+[Azure-Samples/interview-coach-agent-framework](https://github.com/Azure-Samples/interview-coach-agent-framework)를 포크해서, 에이전트의 메모리 저장소를 MongoDB Atlas로 바꾼 데모입니다. 앱은 GitHub Copilot SDK, Microsoft Agent Framework, MCP, Aspire로 만들었습니다.
 
-## Two ways to engage with this repository
+코치는 이력서와 직무기술서(JD)를 바탕으로 모의 면접을 진행하고 피드백을 줍니다. 면접 내용은 모두 저장되기 때문에 나중에 이런 질문을 할 수 있습니다.
 
-**[Learn by building](https://codemillmatt.github.io/interview-coach-agent-framework/workshop/):** The workshop guides you through constructing the application from a cloud-free starter. Fifteen lessons start with tool setup and a completed-example run in Chapter 0. Then keep working in a separate starter: create an agent, stream its replies, add tools and records, read documents, and build specialist handoffs. The starter supplies the UI, repository, and a source-derived `WorkshopHosting.cs` helper for model authentication, client setup, optional Copilot support, and DevUI. It starts cloud-free. In the first-agent lesson you write the `ChatClientAgent` constructor and coaching instructions, then activate the supplied hosting. Core orchestration edits stay in root `apphost.cs`; the capstone's explicit support patch prepares the completed deployment entry point.
+- "Kestrel 면접이 언제였지?"
+- "최근 5건 면접에서 공통으로 나온 피드백이 뭐야?"
+- "내 디버깅 역량을 칭찬한 회사가 어디였지?"
 
-**[Run the finished application](#run-the-repository):** This repository contains the completed application. Clone it, configure it, and run it to see the interview coach in action. Use the reference documentation below to understand the architecture, configuration, and data contracts. You don't need the workshop to run the finished version.
+## 메모리 구성
 
-For an exact setting or contract, use the [architecture](docs/ARCHITECTURE.md), [configuration](docs/CONFIGURATION.md), [agent modes](docs/MULTI-AGENT.md), and [session data](docs/SESSION-DATA.md) references.
+에이전트 메모리를 네 종류로 나누고, 종류마다 컬렉션 하나에 저장합니다.
 
-## How the application works
+| 메모리 | 컬렉션 | 담는 내용 | 누가 저장하나 | 어떻게 꺼내나 |
+|---|---|---|---|---|
+| Short Term (단기) | `chat_messages` | 진행 중인 대화의 발화 | 앱의 미들웨어가 매 턴 자동 저장 (LLM 판단과 무관) | 대화 ID로 조회. 새로고침하면 대화가 복원되고, 오래된 대화는 TTL로 삭제 (기본 30일) |
+| Episodic (일화) | `sessions` | 면접 한 건의 회사, 직무, 대화록, 요약 | 면접 중에 에이전트가 도구를 호출해 저장 | 회사명, 날짜, 최신순으로 필터링 |
+| Semantic (의미): 피드백 항목 | `feedback_items` | 면접에서 나온 강점과 개선점. 항목 하나가 문서 하나이고 임베딩을 포함 | 면접이 끝나면 `summariser` 에이전트가 저장 | MongoDB Vector Search on Atlas로 의미 검색. 메타데이터 필터와 함께 사용 |
+| Semantic (의미): 사용자 프로필 | `user_profile` | 지난 면접 전체를 종합한 강점, 개선점, 면접 횟수 | 면접이 끝날 때마다 `summariser`가 다시 작성 | 문서 하나를 그대로 조회 |
 
-The browser connects to a server-interactive Blazor UI. The WebUI server sends chat messages to the .NET agent service through AG-UI. Agent Framework runs either one coach or a handoff workflow with triage, receptionist, behavioural interviewer, technical interviewer, and summariser roles. The workflow transfers control between roles that share the configured model deployment.
+메모리별 설계는 [docs/MEMORY.md](docs/MEMORY.md), 시연 순서와 프롬프트는 [docs/DEMO.md](docs/DEMO.md)에 정리했습니다.
 
-InterviewData MCP exposes the Cosmos-backed interview repository. MarkItDown MCP extracts document text. The model requests tool calls, and application code executes them.
+## 빠른 시작
 
-The agents run in the application's .NET process. Foundry hosts the model. Aspire starts the local services and supplies their connections. The UI message list and session ID live in the WebUI's server-side Blazor circuit. Refreshing creates a new circuit and session; earlier interview records remain available through InterviewData.
+1. [준비 사항](docs/PREREQUISITES.md)을 먼저 진행합니다. Atlas M0 클러스터와 DB 사용자를 만들고, 연결 문자열과 Atlas에서 발급한 Voyage AI API 키를 받아 둡니다.
+2. `.env`에 값을 채우고, 인덱스를 만든 뒤 샘플 데이터를 넣습니다. Python 의존성은 데브컨테이너에 미리 설치돼 있습니다.
+   ```sh
+   cp .env.sample .env   # 값을 채웁니다
+   python scripts/memory/create_indexes.py && python scripts/memory/seed_memory.py
+   ```
+3. 같은 값을 AppHost의 user secrets에 등록하고 GitHub에 로그인합니다. 자세한 설명은 [준비 사항](docs/PREREQUISITES.md#3-시크릿-설정)에 있습니다.
+   ```sh
+   set -a; source <(tr -d '\r' < .env); set +a   # tr은 Windows 줄바꿈 제거
+   dotnet user-secrets --file ./apphost.cs set ConnectionStrings:mongodb "$MONGODB_URI"
+   dotnet user-secrets --file ./apphost.cs set Parameters:voyage-api-key "$VOYAGE_API_KEY"
+   gh auth login
+   ```
+4. Docker 같은 컨테이너 엔진을 켜 둔 상태에서 실행합니다. MarkItDown MCP Server가 컨테이너로 실행되기 때문입니다.
+   ```sh
+   aspire start --apphost ./apphost.cs
+   ```
 
-## Run the repository
-
-The commands below run the completed application in this checkout. Both root `apphost.cs` and `src/InterviewCoach.AppHost` contain the completed resource graph here. Workshop downloads have their own staged scaffold; their project-based AppHost stays in its starter state until capstone finalization. See [entry points](docs/ARCHITECTURE.md#local-and-deployed-entry-points).
-
-For the pinned, guided version, start with [Chapter 0](https://codemillmatt.github.io/interview-coach-agent-framework/workshop/00-orientation/). To run the current checkout, install .NET 10, the Aspire CLI, a compatible container engine, and the Azure CLI.
-
-**A local run can provision billable Azure resources.** The default AppHost declares a Foundry resource and model deployment. Before starting, confirm the subscription, region, model availability, quota, provisioning permissions, and cleanup owner. See [Foundry configuration](docs/providers/MICROSOFT-FOUNDRY.md). Use fictional interview data and a development environment you own.
-
-```sh
-git clone https://github.com/codemillmatt/interview-coach-agent-framework.git
-cd interview-coach-agent-framework
-az login
-az account show --query "{subscription:name, subscriptionId:id, tenant:tenantId}" --output table
-```
-
-Review `apphost.settings.json` before the next command. It selects `MicrosoftFoundry` and `HandOff` by default and requests a specific model version and capacity. The agent uses `DefaultAzureCredential`; do not put API keys in source.
-
-From the repository root, with the container engine running:
-
-```sh
-aspire start --apphost ./apphost.cs
-```
-
-Open the dashboard URL printed by Aspire, inspect the resources, and use the `webui` endpoint when its dependencies are ready. Try the [fictional samples](samples/) and inspect the saved record as described in [application usage](docs/USER-MANUAL.md).
-
-The application also implements [GitHub Copilot](docs/providers/GITHUB-COPILOT.md) as an optional provider and [single-agent mode](docs/MULTI-AGENT.md#single-mode) as a simpler baseline.
-
-## Stop and clean up
-
-From the folder that started the AppHost:
-
-```sh
-aspire stop --apphost ./apphost.cs
-```
-
-**Cloud resources remain until cleanup.** Keep an inventory of the resources created by each run. If you later use the optional [Container Apps deployment](https://codemillmatt.github.io/interview-coach-agent-framework/resources/deployment/), its `azd` environment has a separate cleanup scope. Follow the [cleanup reference](docs/DEPLOYMENT.md#remove-only-the-resources-you-own) and remove only resources you own.
-
-This is a learning sample. Review authentication, per-user record access, exposed development endpoints, uploads, and retention before using real interview data or opening it to other users.
-
-## Develop the workshop website
-
-The static Astro/Starlight website is separate from the .NET application. With Node 24 installed:
-
-```sh
-cd workshop
-npm ci
-npm run dev
-```
-
-The build generates source-backed checkpoints and imports the canonical reference from `docs/` without Azure credentials. See [workshop authoring](workshop/README.md) for the content and checkpoint contracts.
-
-## Project information
-
-[Contributing](docs/CONTRIBUTING.md) explains how to report issues and submit changes. The project uses the [MIT license](LICENSE.md).
+웹 UI 포트는 데브컨테이너가 자동으로 포워딩합니다. <http://localhost:5087>(또는 Aspire 대시보드의 `webui` 엔드포인트)을 열고, [samples/](samples/)의 가상 이력서로 면접을 한 번 진행해 보세요. 면접이 끝나면 지난 면접에 대해 물어볼 수 있습니다.
