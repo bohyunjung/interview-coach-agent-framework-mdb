@@ -19,4 +19,4 @@ dotnet user-secrets --file ./apphost.cs set ConnectionStrings:mongodb "$MONGODB_
 dotnet user-secrets --file ./apphost.cs set Parameters:voyage-api-key "$VOYAGE_API_KEY"
 ```
 
-Python 스크립트는 `.env`([.env.sample](../.env.sample))에서 `MONGODB_URI`와 `VOYAGE_API_KEY`를 읽습니다. 필요하면 `MONGODB_DATABASE`, `VOYAGE_MODEL`, `VOYAGE_DIMENSIONS`, `CHAT_MESSAGES_TTL_DAYS`(기본 30일)도 지정할 수 있습니다. Atlas 네트워크와 사용자 설정은 [준비 사항](PREREQUISITES.md)을 보세요. `.env`와 키는 커밋하지 않습니다.
+Python 스크립트는 `.env`([.env.sample](../.env.sample))에서 `MONGODB_URI`와 `VOYAGE_API_KEY`를 읽습니다. 필요하면 `MONGODB_DATABASE`, `VOYAGE_MODEL`, `VOYAGE_DIMENSIONS`, `CHAT_MESSAGES_TTL_DAYS`(기본 30일)도 지정할 수 있습니다. Atlas 네트워크와 사용자 설정은 [설정 및 실행 가이드](SETUP.md)를 보세요. `.env`와 키는 커밋하지 않습니다.

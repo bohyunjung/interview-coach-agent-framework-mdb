@@ -23,22 +23,13 @@
 
 ## 빠른 시작
 
-1. [준비 사항](docs/PREREQUISITES.md)을 먼저 진행합니다. Atlas M0 클러스터와 DB 사용자를 만들고, 연결 문자열과 Atlas에서 발급한 Voyage AI API 키를 받아 둡니다.
-2. `.env`에 값을 채우고, 인덱스를 만든 뒤 샘플 데이터를 넣습니다. Python 의존성은 데브컨테이너에 미리 설치돼 있습니다.
+1. [준비 사항](docs/PREREQUISITES.md)을 확인합니다. VS Code에서 저장소를 열고 **Reopen in Container**를 선택하는 것을 권장합니다.
+2. [설정 및 실행 가이드](docs/SETUP.md)를 따라 Atlas와 Voyage AI를 설정하고, 시크릿 등록, 샘플 데이터 준비, 앱 실행을 진행합니다.
+
+   샘플 데이터를 직접 준비하려면 다음 명령을 사용합니다. Python 의존성은 Dev Container에 미리 설치돼 있습니다.
    ```sh
-   cp .env.sample .env   # 값을 채웁니다
+   cp .env.sample .env   # MONGODB_URI와 VOYAGE_API_KEY 값을 채웁니다
    python scripts/memory/create_indexes.py && python scripts/memory/seed_memory.py
    ```
-3. 같은 값을 AppHost의 user secrets에 등록하고 GitHub에 로그인합니다. 자세한 설명은 [준비 사항](docs/PREREQUISITES.md#3-시크릿-설정)에 있습니다.
-   ```sh
-   set -a; source <(tr -d '\r' < .env); set +a   # tr은 Windows 줄바꿈 제거
-   dotnet user-secrets --file ./apphost.cs set ConnectionStrings:mongodb "$MONGODB_URI"
-   dotnet user-secrets --file ./apphost.cs set Parameters:voyage-api-key "$VOYAGE_API_KEY"
-   gh auth login
-   ```
-4. Docker 같은 컨테이너 엔진을 켜 둔 상태에서 실행합니다. MarkItDown MCP Server가 컨테이너로 실행되기 때문입니다.
-   ```sh
-   aspire start --apphost ./apphost.cs
-   ```
 
-웹 UI 포트는 데브컨테이너가 자동으로 포워딩합니다. <http://localhost:5087>(또는 Aspire 대시보드의 `webui` 엔드포인트)을 열고, [samples/](samples/)의 가상 이력서로 면접을 한 번 진행해 보세요. 면접이 끝나면 지난 면접에 대해 물어볼 수 있습니다.
+Web UI는 모든 필수 시크릿을 등록하고 Aspire 리소스가 실행된 뒤 <http://localhost:5087>에서 열립니다. 접속이 되지 않으면 먼저 Aspire 대시보드에서 `mcp-memory`, `agent`, `webui` 상태를 확인하세요. [samples/](samples/)의 가상 이력서로 면접을 진행하고, 면접이 끝나면 지난 면접에 대해 물어볼 수 있습니다.

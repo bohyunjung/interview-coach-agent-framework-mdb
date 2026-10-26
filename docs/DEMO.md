@@ -53,7 +53,7 @@ Atlas에 샘플 데이터가 들어 있고 앱이 실행 중이라고 가정합�
 이 시나리오에서는 대화(Short Term)가 세션과 피드백 항목(Episodic, Semantic)으로 정리되고, 다시 프로필(Semantic)로 종합되는 흐름을 볼 수 있습니다.
 
 ## 시나리오 4. 읽기 전용 MongoDB MCP Server로 데이터 들여다보기
-앱과는 별개의 경로입니다. VS Code Copilot Chat을 Agent 모드로 열고, 도구 선택기에서 `mongodb` 서버를 시작합니다. 연결 문자열을 물으면 `.env`의 `MONGODB_URI`를 붙여 넣습니다. 서버가 `--readOnly`로 실행되므로 데이터를 바꿀 수 없습니다. 설정은 [.vscode/mcp.json](../.vscode/mcp.json), 설명은 [준비 사항](PREREQUISITES.md#5-선택-copilot-chat에서-메모리-들여다보기)에 있습니다.
+앱과는 별개의 경로입니다. VS Code Copilot Chat을 Agent 모드로 열고, 도구 선택기에서 `mongodb` 서버를 시작합니다. 연결 문자열을 물으면 `.env`의 `MONGODB_URI`를 붙여 넣습니다. 서버가 `--readOnly`로 실행되므로 데이터를 바꿀 수 없습니다. 설정은 [.vscode/mcp.json](../.vscode/mcp.json), 설명은 [설정 및 실행 가이드](SETUP.md#6-선택-copilot-chat에서-메모리-들여다보기)에 있습니다.
 
 참가자가 직접 해 볼 수 있는 질문입니다. 위쪽일수록 쉽습니다.
 
