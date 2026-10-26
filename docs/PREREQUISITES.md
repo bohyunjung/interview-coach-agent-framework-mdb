@@ -16,5 +16,5 @@
 
 ## 선택 기능
 
-- Copilot Chat에서 MongoDB MCP Server를 쓰려면 Node.js가 필요합니다. Dev Container에는 포함돼 있습니다.
+- Copilot Chat에서 데이터를 조회하려면 MongoDB for VS Code Extension의 내장 MCP Server를 사용합니다. Extension은 Dev Container에 포함돼 있으며, 이 기능을 위해 Node.js를 별도로 설치할 필요는 없습니다.
 - 데이터베이스를 조회 전용으로 제한하려면 Atlas에서 읽기 전용 DB 사용자를 별도로 만들 수 있습니다. 설정은 [설정 및 실행 가이드](SETUP.md#6-선택-copilot-chat에서-메모리-들여다보기)에 있습니다.

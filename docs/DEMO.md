@@ -11,7 +11,7 @@ Atlas에 샘플 데이터가 들어 있고 앱이 실행 중이라고 가정합�
 ## 0. 준비 (시연 전)
 1. `create_indexes.py`를 실행하고 `seed_memory.py --reset`으로 샘플 데이터만 남깁니다. Atlas UI의 Search & Vector Search에서 `feedback_vector_index`의 상태가 `READY`인지 확인합니다.
 2. Aspire 대시보드에서 `webui`, `agent`, `mcp-memory`, `mcp-markitdown`이 모두 Running인지 확인합니다.
-3. VS Code에서 읽기 전용 MongoDB MCP Server를 시작하고([시나리오 4](#시나리오-4-읽기-전용-mongodb-mcp-server로-데이터-들여다보기) 참고), Atlas UI의 Data Explorer도 탭으로 열어 둡니다.
+3. MongoDB for VS Code Extension에서 Atlas에 연결하고 내장 MCP Server를 시작합니다([시나리오 4](#시나리오-4-읽기-전용-mongodb-mcp-server로-데이터-들여다보기) 참고). Atlas UI의 Data Explorer도 탭으로 열어 둡니다.
 
 ## 시나리오 1. 지난 면접 회상 (샘플 데이터만 사용)
 새 채팅에서 바로 질문합니다. `triage`가 `memory_coach`에게 넘기고, 어떤 도구가 호출됐는지는 Aspire 대시보드나 로그에서 보여 줍니다.
@@ -53,7 +53,7 @@ Atlas에 샘플 데이터가 들어 있고 앱이 실행 중이라고 가정합�
 이 시나리오에서는 대화(Short Term)가 세션과 피드백 항목(Episodic, Semantic)으로 정리되고, 다시 프로필(Semantic)로 종합되는 흐름을 볼 수 있습니다.
 
 ## 시나리오 4. 읽기 전용 MongoDB MCP Server로 데이터 들여다보기
-앱과는 별개의 경로입니다. VS Code Copilot Chat을 Agent 모드로 열고, 도구 선택기에서 `mongodb` 서버를 시작합니다. 연결 문자열을 물으면 `.env`의 `MONGODB_URI`를 붙여 넣습니다. 서버가 `--readOnly`로 실행되므로 데이터를 바꿀 수 없습니다. 설정은 [.vscode/mcp.json](../.vscode/mcp.json), 설명은 [설정 및 실행 가이드](SETUP.md#6-선택-copilot-chat에서-메모리-들여다보기)에 있습니다.
+앱과는 별개의 경로로, **MongoDB for VS Code Extension의 내장 MCP Server**를 사용합니다. MongoDB 사이드바에서 Atlas 연결을 추가하고 접속한 다음, 명령 팔레트의 **MongoDB: Start MCP Server**를 실행합니다. Copilot Chat을 Agent 모드로 열고 도구 선택기에서 Extension이 제공하는 MongoDB MCP 도구를 활성화합니다. [.vscode/settings.json](../.vscode/settings.json)의 `mdb.mcp.readOnly: true` 설정으로 MCP 쓰기 도구는 비활성화돼 있습니다. 자세한 연결 절차는 [설정 및 실행 가이드](SETUP.md#6-선택-copilot-chat에서-메모리-들여다보기)에 있습니다.
 
 참가자가 직접 해 볼 수 있는 질문입니다. 위쪽일수록 쉽습니다.
 
@@ -71,7 +71,7 @@ Atlas에 샘플 데이터가 들어 있고 앱이 실행 중이라고 가정합�
 | `user_profile 문서를 보여주고, 반복되는 개선점이 몇 개 세션에서 나왔는지 설명해줘.` | 프로필에 종합된 결과 |
 | `sessions에서 Orbitwave Labs 세션을 삭제해줘.` | 읽기 전용이라 거부됩니다. |
 
-같은 데이터를 MongoDB for VS Code Extension(사이드바의 연결)으로 열어 GUI로 보여 주는 것도 좋은 비교가 됩니다. Extension은 사람이 직접 살펴보는 도구이고, MCP Server는 Copilot이 질문에 답하려고 쓰는 도구입니다.
+같은 데이터를 MongoDB 사이드바에서 열어 GUI와 Copilot의 조회 결과를 비교할 수 있습니다. Extension의 GUI와 내장 MCP Server는 같은 활성 연결을 사용합니다. 클러스터를 바꾸면 Copilot의 조회 대상도 바뀌므로 시연 전에 연결을 확인하세요. MCP의 읽기 전용 설정이 GUI 작업까지 제한하지는 않습니다.
 
 ## 질문이 나올 때
 - Voyage 키가 없거나 잘못돼도 의미 검색만 실패하고 채팅은 계속됩니다. Short Term 저장이 실패해도 로그만 남기고 대화는 막지 않습니다.

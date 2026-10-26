@@ -134,4 +134,4 @@ Memory MCP Server의 도구를 역할에 따라 세 묶음으로 나눠, 에이�
 3. `get_user_profile`로 기존 프로필을 읽고, 이번 면접 내용을 반영해 `save_user_profile`로 다시 저장합니다.
 
 ## 데이터 들여다보기
-`.vscode/mcp.json`에 공식 MongoDB MCP Server가 읽기 전용으로 등록돼 있어서, Copilot Chat에서 에이전트가 저장한 데이터를 조회할 수 있습니다. 설정 방법은 [설정 및 실행 가이드](SETUP.md#6-선택-copilot-chat에서-메모리-들여다보기), 질문 예시는 [시나리오 4](DEMO.md#시나리오-4-읽기-전용-mongodb-mcp-server로-데이터-들여다보기)에 있습니다.
+MongoDB for VS Code Extension의 내장 MCP Server로 Copilot Chat에서 에이전트가 저장한 데이터를 조회합니다. MCP Server는 MongoDB 사이드바의 활성 연결을 공유하며, [.vscode/settings.json](../.vscode/settings.json)의 `mdb.mcp.readOnly: true` 설정으로 MCP 쓰기 도구를 비활성화합니다. 연결 및 시작 방법은 [설정 및 실행 가이드](SETUP.md#6-선택-copilot-chat에서-메모리-들여다보기), 질문 예시는 [시나리오 4](DEMO.md#시나리오-4-읽기-전용-mongodb-mcp-server로-데이터-들여다보기)에 있습니다.

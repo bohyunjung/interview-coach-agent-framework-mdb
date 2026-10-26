@@ -70,10 +70,14 @@ Aspire 대시보드에서 `mcp-memory`, `agent`, `webui`가 모두 실행 중인
 
 ## 6. (선택) Copilot Chat에서 메모리 들여다보기
 
-[.vscode/mcp.json](../.vscode/mcp.json)에 공식 [MongoDB MCP Server](https://github.com/mongodb-js/mongodb-mcp-server)가 `--readOnly`로 등록돼 있습니다. Copilot Chat에서 에이전트가 저장한 데이터를 조회할 수 있고, 수정은 할 수 없습니다. `npx`로 실행되며 Dev Container에는 Node.js가 설치돼 있습니다.
+이 프로젝트는 **MongoDB for VS Code Extension의 내장 MCP Server**를 사용합니다. Dev Container에 Extension이 설치돼 있으며, MCP Server는 사이드바에서 활성화한 MongoDB 연결을 공유합니다. 별도의 MCP 서버 등록이나 Node.js 설치는 필요하지 않습니다.
 
-1. Copilot Chat을 Agent 모드로 열고, 도구 선택기에서 `mongodb` 서버를 시작합니다.
-2. 연결 문자열을 물으면 `.env`의 `MONGODB_URI`를 붙여 넣습니다. 데이터베이스에서도 읽기 전용을 강제하려면 위에서 만든 `interview-coach-readonly` 사용자의 연결 문자열을 쓰세요.
-3. 질문해 봅니다. 예: "`interview_coach`의 컬렉션별 문서 수를 알려줘." 더 많은 예시는 [시나리오 4](DEMO.md#시나리오-4-읽기-전용-mongodb-mcp-server로-데이터-들여다보기)에 있습니다.
+[.vscode/settings.json](../.vscode/settings.json)에서 `mdb.mcp.readOnly: true`로 MCP 쓰기 도구를 비활성화하고, `mdb.mcp.server: "autoStartDisabled"`로 필요할 때 수동 시작하도록 설정했습니다.
 
-Dev Container에는 MongoDB for VS Code Extension도 설치돼 있습니다. 이 Extension은 사람이 컬렉션을 GUI로 살펴보고 쿼리를 실행하는 도구이고, MCP Server와는 별개로 동작합니다.
+1. VS Code의 MongoDB 사이드바에서 **Add Connection**으로 Atlas 연결을 추가합니다. `.env`의 `MONGODB_URI`를 사용하거나, 데이터베이스에서도 읽기 전용을 강제하려면 위에서 만든 `interview-coach-readonly` 사용자의 연결 문자열을 쓰세요. 연결 문자열을 저장소에 커밋하지 않습니다.
+2. 사이드바에서 해당 연결에 접속합니다. 연결을 추가하기만 하고 접속하지 않으면 MCP 도구가 데이터를 조회할 수 없습니다.
+3. 명령 팔레트에서 **MongoDB: Start MCP Server**를 실행합니다.
+4. Copilot Chat을 Agent 모드로 열고, 도구 선택기에서 Extension이 제공하는 MongoDB MCP 도구를 활성화합니다.
+5. 질문해 봅니다. 예: "`interview_coach`의 컬렉션별 문서 수를 알려줘." 더 많은 예시는 [시나리오 4](DEMO.md#시나리오-4-읽기-전용-mongodb-mcp-server로-데이터-들여다보기)에 있습니다.
+
+연결하라는 응답이 나오면 MongoDB 사이드바에서 현재 연결이 활성 상태인지 확인하세요. Extension의 GUI와 MCP가 같은 연결을 사용하므로, 사이드바에서 다른 클러스터로 연결을 바꾸면 MCP의 조회 대상도 바뀝니다. `mdb.mcp.readOnly`는 MCP 도구에 대한 설정이며 GUI 작업까지 읽기 전용으로 제한하지는 않습니다.
