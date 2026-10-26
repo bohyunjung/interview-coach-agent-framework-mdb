@@ -4,13 +4,13 @@ Keep application reference in `docs/`.
 
 ## Choose an issue form
 
-Open the [issue form chooser](https://github.com/Azure-Samples/interview-coach-agent-framework/issues/new/choose) and select **Bug report**, **Feature request**, **Documentation issue or request**, **Regression**, or **General request**. Use **Regression** when behavior worked in an earlier version, and include the last known working and first known failing versions. Use **General request** for questions or requests that do not fit the other categories.
+Open this repository's [issues page](https://github.com/mongodb-developers-kr/interview-coach-agent-framework-mdb/issues), click **New issue**, and select **Bug report**, **Feature request**, **Documentation issue or request**, **Regression**, or **General request**. Use **Regression** when behavior worked in an earlier version, and include the last known working and first known failing versions. Use **General request** for questions or requests that do not fit the other categories.
 
 ## <a name="issue"></a> Report a bug
 
 <a id="submit-issue"></a>
 
-Search the [issues](https://github.com/Azure-Samples/interview-coach-agent-framework/issues) before opening one. Include the affected checkpoint or revision, operating system, command, input, expected result, and actual result. For model behavior, include the provider, model, tool call, and relevant stored state rather than only a screenshot of the reply.
+Search the [issues](https://github.com/mongodb-developers-kr/interview-coach-agent-framework-mdb/issues) before opening one. Include the affected checkpoint or revision, operating system, command, input, expected result, and actual result. For model behavior, include the provider, model, tool call, and relevant stored state rather than only a screenshot of the reply.
 
 Use fictional documents and redact credentials, account details, and transcript contents from logs. Do not post real interview records.
 
